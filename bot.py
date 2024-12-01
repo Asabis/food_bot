@@ -1,7 +1,7 @@
 import logging
 import os
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Tuple, Optional, Dict
 from dataclasses import dataclass
 
@@ -24,7 +24,7 @@ from PIL import Image
 from reportlab.lib.units import mm
 from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate
 
-from database import add_entry
+from database import add_entry, get_entries_for_period
 from config import TELEGRAM_BOT_TOKEN, FONT_PATH
 from constants import ConversationState, NUTRIENT_LIMITS, MESSAGES, MEAL_TIMES
 from nutrition_analyzer import NutritionAnalyzer
@@ -163,7 +163,7 @@ async def upload_photos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             context.user_data.setdefault('image_paths', []).append(image_path)
             logger.info(f"Фотография сохранена по пути: {image_path}")
             await update.message.reply_text(
-                "📷 Фотография сохранена. Вы можете отправить ещё фотографию или введите /done, чтобы продолжить."
+                "📷 Фотография сохранна. Вы можете отправить ещё фотографию или введите /done, чтобы продолжить."
             )
         except Exception as e:
             logger.error(f"Ошибка при сохранении фотографии: {e}")
@@ -211,7 +211,7 @@ class NutrientInputHandler:
         context: ContextTypes.DEFAULT_TYPE, 
     ) -> int:
         """
-        Обрабатывает ввод пользователя для текущего состояния и переходит к следующему.
+        Обрабатывает ввод пользоателя для текущего состояния и переходит к следующему.
         """
         current_state = ConversationState(context.user_data['current_state'])
         nutrient_key, nutrient_name = self.nutrients[current_state]
@@ -336,7 +336,7 @@ class PDFReportGenerator:
         # Нормы потребления
         styles.add(ParagraphStyle(
             name='Norms',
-            alignment=0,  # Выравнивание по левому краю
+            alignment=0,  # ыравнивание по левому краю
             fontName='CustomCyrillicFont-Bold',
             fontSize=14,
             spaceAfter=10,
@@ -381,7 +381,7 @@ class PDFReportGenerator:
             name='PhotoCaption',
             fontName='CustomCyrillicFont',
             fontSize=12,
-            alignment=1,  # Центрирование
+            alignment=1,  # Ц��нтрирование
             spaceAfter=5,
             textColor=colors.HexColor('#2980B9'),  # Синий
             wordWrap='CJK'  # Добавлено свойство переноса
@@ -436,7 +436,7 @@ class PDFReportGenerator:
             Paragraph('Овощи', self.styles['TableHeader']),
             Paragraph('Жиры', self.styles['TableHeader']),
             Paragraph('Фрукты', self.styles['TableHeader']),
-            Paragraph('Молочка', self.styles['TableHeader']),
+            Paragraph('Молока', self.styles['TableHeader']),
             Paragraph('Злаки', self.styles['TableHeader']),
             Paragraph('Время', self.styles['TableHeader']),
         ]]
@@ -517,7 +517,7 @@ class PDFReportGenerator:
             # Форматирование времени
             time_str = timestamp.astimezone(MOSCOW_TZ).strftime("%H:%M")
 
-            # Добавляем подпись к фото с временем
+            # Добавляем подпись к фото с времнем
             caption_text = f"📷 {meal_time} в {time_str}"
             elements.append(Paragraph(caption_text, self.styles['PhotoCaption']))
             elements.append(Spacer(1, 5))
@@ -567,10 +567,10 @@ class PDFReportGenerator:
                 norms_text += f"• Овощи: {self.nutrition_analyzer.recommendations.vegetables_daily} порций\n"
                 norms_text += f"• Жиры: {self.nutrition_analyzer.recommendations.fats_daily} порций\n"
                 norms_text += f"• Фрукты: {self.nutrition_analyzer.recommendations.fruits_daily} порций\n"
-                norms_text += f"• Молочные продукты: {self.nutrition_analyzer.recommendations.dairy_daily} порций\n"
+                norms_text += f"• Молочные продкты: {self.nutrition_analyzer.recommendations.dairy_daily} порций\n"
                 norms_text += f"• Злаки: {self.nutrition_analyzer.recommendations.grains_daily} порций\n"
             else:
-                norms_text = "Ваши ежедневные нормы потребления:\n"
+                norms_text = "Ваши ежедневные норм потребления:\n"
                 norms_text += "• Белки: ? порций\n"
                 norms_text += "• Овощи: ? порций\n"
                 norms_text += "• Жиры: ? порций\n"
@@ -644,15 +644,177 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 async def view_report(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("Функция просмотра отчёта в разработке. Пожалуйста, попробуйте позже.")
 
-# Define missing functions
 async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Статистика пока недоступна.")
+    """Показывает статистику питания за последнюю неделю."""
+    user_id = update.effective_user.id
+    end_date = datetime.now(MOSCOW_TZ)
+    start_date = end_date - timedelta(days=7)
 
-async def set_norms(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Функция установки норм пока недоступна.")
+    # Получаем записи за период
+    entries = get_entries_for_period(
+        user_id,
+        start_date.strftime("%Y-%m-%d"),
+        end_date.strftime("%Y-%m-%d")
+    )
+
+    if not entries:
+        await update.message.reply_text("📊 Нет данных за последнюю неделю.")
+        return
+
+    # Анализируем данные и формируем статистику
+    daily_totals = {}
+    for entry in entries:
+        date = entry[0]
+        protein = entry[2] or 0
+        vegetables = entry[3] or 0
+        fats = entry[4] or 0
+        fruits = entry[5] or 0
+        dairy = entry[6] or 0
+        grains = entry[7] or 0
+
+        if date not in daily_totals:
+            daily_totals[date] = {
+                'protein': 0, 'vegetables': 0, 'fats': 0,
+                'fruits': 0, 'dairy': 0, 'grains': 0
+            }
+
+        daily_totals[date]['protein'] += protein
+        daily_totals[date]['vegetables'] += vegetables
+        daily_totals[date]['fats'] += fats
+        daily_totals[date]['fruits'] += fruits
+        daily_totals[date]['dairy'] += dairy
+        daily_totals[date]['grains'] += grains
+
+    # Формируем сообщение со статистикой
+    message = "📊 *Статистика питания за последнюю неделю:*\n"
+    for date, totals in daily_totals.items():
+        formatted_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d.%m.%Y")
+        message += f"\n📅 *{formatted_date}*\n"
+        message += f"🍗 Белки: {totals['protein']} порций\n"
+        message += f"🥦 Овощи: {totals['vegetables']} порций\n"
+        message += f"🥑 Жиры: {totals['fats']} порций\n"
+        message += f"🍎 Фрукты: {totals['fruits']} порций\n"
+        message += f"🥛 Молочка: {totals['dairy']} порций\n"
+        message += f"🍞 Злаки: {totals['grains']} порций\n"
+
+    await update.message.reply_text(message, parse_mode='Markdown')
+
+async def set_norms_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Начинает диалог установки норм."""
+    await update.message.reply_text(
+        "⚙️ Вы собираетесь установить свои ежедневные нормы потребления пищевых групп.\n"
+        "Это поможет давать более точные рекомендации.\n\n"
+        "Введите вашу ежедневную норму *Белков* (в порциях):",
+        parse_mode='Markdown'
+    )
+    return SET_PROTEIN
+
+async def set_protein(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    try:
+        protein = int(update.message.text)
+        context.user_data['protein_daily'] = protein
+        await update.message.reply_text("Введите вашу ежедневную норму *Овощей* (в порциях):")
+        return SET_VEGETABLES
+    except ValueError:
+        await update.message.reply_text("Пожалуйста, введите целое число для *Белков* (в порциях):", parse_mode='Markdown')
+        return SET_PROTEIN
+
+async def set_vegetables(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    try:
+        vegetables = int(update.message.text)
+        context.user_data['vegetables_daily'] = vegetables
+        await update.message.reply_text("Введите вашу ежедневную норму *Жиров* (в порциях):")
+        return SET_FATS
+    except ValueError:
+        await update.message.reply_text("Пожалуйста, введите целое число для *Овощей* (в порциях):", parse_mode='Markdown')
+        return SET_VEGETABLES
+
+async def set_fats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    try:
+        fats = int(update.message.text)
+        context.user_data['fats_daily'] = fats
+        await update.message.reply_text("Введите вашу ежедневную норму *Фруктов* (в порциях):")
+        return SET_FRUITS
+    except ValueError:
+        await update.message.reply_text("Пожалуйста, введите целое число для *Жиров* (в порциях):", parse_mode='Markdown')
+        return SET_FATS
+
+async def set_fruits(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    try:
+        fruits = int(update.message.text)
+        context.user_data['fruits_daily'] = fruits
+        await update.message.reply_text("Введите вашу ежедневную норму *Молочных продуктов* (в порциях):")
+        return SET_DAIRY
+    except ValueError:
+        await update.message.reply_text("Пожалуйста, введите целое число для *Фруктов* (в порциях):", parse_mode='Markdown')
+        return SET_FRUITS
+
+async def set_dairy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    try:
+        dairy = int(update.message.text)
+        context.user_data['dairy_daily'] = dairy
+        await update.message.reply_text("Введите вашу ежедневную норму *Злаков* (в порциях):")
+        return SET_GRAINS
+    except ValueError:
+        await update.message.reply_text("Пожалуйста, введите целое число для *Молочных продуктов* (в порциях):", parse_mode='Markdown')
+        return SET_DAIRY
+
+async def set_grains(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    try:
+        grains = int(update.message.text)
+        context.user_data['grains_daily'] = grains
+
+        # Сохраняем пользовательские нормы
+        user_norms = {
+            'protein_daily': context.user_data.get('protein_daily'),
+            'vegetables_daily': context.user_data.get('vegetables_daily'),
+            'fats_daily': context.user_data.get('fats_daily'),
+            'fruits_daily': context.user_data.get('fruits_daily'),
+            'dairy_daily': context.user_data.get('dairy_daily'),
+            'grains_daily': context.user_data.get('grains_daily'),
+        }
+        context.user_data['user_norms'] = user_norms
+
+        await update.message.reply_text("✅ Ваши ежедневные нормы успешно сохранены!")
+        return ConversationHandler.END
+    except ValueError:
+        await update.message.reply_text("Пожалуйста, введите целое число для *Злаков* (в порциях):", parse_mode='Markdown')
+        return SET_GRAINS
 
 async def set_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Функция настройки напоминаний пока недоступна.")
+    """Настраивает напоминания о приёмах пищи."""
+    chat_id = update.effective_chat.id
+
+    # Удаляем предыдущие задания, если они есть
+    if 'reminder_jobs' in context.chat_data:
+        for job in context.chat_data['reminder_jobs']:
+            job.schedule_removal()
+        context.chat_data['reminder_jobs'] = []
+
+    # Настраиваем напоминания (пример фиксированных времён)
+    times = ['08:00', '12:00', '18:00']  # Замените на нужные времена
+
+    reminder_jobs = []
+    for time_str in times:
+        hour, minute = map(int, time_str.split(':'))
+        job = context.job_queue.run_daily(
+            send_reminder,
+            time=datetime.time(hour=hour, minute=minute, tzinfo=MOSCOW_TZ),
+            chat_id=chat_id,
+            name=f"reminder_{time_str}_{chat_id}"
+        )
+        reminder_jobs.append(job)
+
+    context.chat_data['reminder_jobs'] = reminder_jobs
+
+    await update.message.reply_text("⏰ Напоминания успешно настроены!")
+
+async def send_reminder(context: ContextTypes.DEFAULT_TYPE):
+    """Отправляет напоминание о приёме пищи."""
+    await context.bot.send_message(
+        chat_id=context.job.chat_id,
+        text="🍽️ Пора записать свой приём пищи!"
+    )
 
 def main():
     """Запускает бота и инициализирует обработчики."""
@@ -663,7 +825,7 @@ def main():
     application.add_handler(MessageHandler(filters.Regex('^/add$'), add_entry_start))
     application.add_handler(MessageHandler(filters.Regex('^/view$'), view_report))
     application.add_handler(MessageHandler(filters.Regex('^/stats$'), show_stats))
-    application.add_handler(MessageHandler(filters.Regex('^/set_norms$'), set_norms))
+    application.add_handler(MessageHandler(filters.Regex('^/set_norms$'), set_norms_start))
     application.add_handler(MessageHandler(filters.Regex('^/reminders$'), set_reminders))
     application.add_handler(MessageHandler(filters.Regex('^/cancel$'), cancel))
 
@@ -705,6 +867,21 @@ def main():
         fallbacks=[CommandHandler('cancel', cancel)],
     )
     application.add_handler(conv_handler)
+
+    # Создаем ConversationHandler для команды /set_norms
+    set_norms_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('set_norms', set_norms_start)],
+        states={
+            SET_PROTEIN: [MessageHandler(filters.TEXT & ~filters.COMMAND, set_protein)],
+            SET_VEGETABLES: [MessageHandler(filters.TEXT & ~filters.COMMAND, set_vegetables)],
+            SET_FATS: [MessageHandler(filters.TEXT & ~filters.COMMAND, set_fats)],
+            SET_FRUITS: [MessageHandler(filters.TEXT & ~filters.COMMAND, set_fruits)],
+            SET_DAIRY: [MessageHandler(filters.TEXT & ~filters.COMMAND, set_dairy)],
+            SET_GRAINS: [MessageHandler(filters.TEXT & ~filters.COMMAND, set_grains)],
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )
+    application.add_handler(set_norms_conv_handler)
 
     # Добавьте обработчик ошибок
     application.add_error_handler(error_handler)
