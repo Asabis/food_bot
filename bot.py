@@ -1,13 +1,12 @@
 import logging
 import os
 from io import BytesIO
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Tuple, Optional, Dict
 from dataclasses import dataclass
 
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
 from telegram.ext import (
-    Application,
     ApplicationBuilder,
     CommandHandler,
     MessageHandler,
@@ -16,7 +15,7 @@ from telegram.ext import (
     ContextTypes,
 )
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, HRFlowable
+from reportlab.platypus import Table, TableStyle, Paragraph, Spacer, PageBreak, HRFlowable
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
@@ -25,10 +24,10 @@ from PIL import Image
 from reportlab.lib.units import mm
 from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate
 
-from database import add_entry, get_entries, get_entries_for_period
+from database import add_entry
 from config import TELEGRAM_BOT_TOKEN, FONT_PATH
-from constants import ConversationState, NUTRIENT_LIMITS, MESSAGES, NUTRIENT_EMOJI, MEAL_TIMES
-from nutrition_analyzer import NutritionAnalyzer, NutritionRecommendations
+from constants import ConversationState, NUTRIENT_LIMITS, MESSAGES, MEAL_TIMES
+from nutrition_analyzer import NutritionAnalyzer
 
 import pytz
 
@@ -533,7 +532,7 @@ class PDFReportGenerator:
 
     async def generate(self, entries: List[DiaryEntry]) -> Optional[str]:
         """
-        Генерирует PDF-отчёт и возвращает путь к файлу.
+        Генерирует PDF-от��ёт и возвращает путь к файлу.
         """
         try:
             os.makedirs(os.path.dirname(self.pdf_path), exist_ok=True)
@@ -636,7 +635,7 @@ class PDFReportGenerator:
         canvas.drawCentredString(A4[0] / 2, 15 * mm, text)
 
 def main():
-    """Запускает бота и ин��циализирует обработчики."""
+    """Запускает бота и инциализирует обработчики."""
     application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
     # Создание обработчиков команд
