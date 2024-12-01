@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import List, Tuple, Optional, Dict
 from dataclasses import dataclass
 
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -163,7 +163,7 @@ async def upload_photos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             context.user_data.setdefault('image_paths', []).append(image_path)
             logger.info(f"Фотография сохранена по пути: {image_path}")
             await update.message.reply_text(
-                "📷 Фотография ��охранена. Вы можете отправить ещё фотографию или введите /done, чтобы продолжить."
+                "📷 Фотография сохранена. Вы можете отправить ещё фотографию или введите /done, чтобы продолжить."
             )
         except Exception as e:
             logger.error(f"Ошибка при сохранении фотографии: {e}")
@@ -186,7 +186,7 @@ class NutrientInputHandler:
             ConversationState.ENTER_VEGETABLES: ('vegetables', "Овощей"),
             ConversationState.ENTER_FATS: ('fats', "Жиров"),
             ConversationState.ENTER_FRUITS: ('fruits', "Фруктов"),
-            ConversationState.ENTER_DAIRY: ('dairy', "Молоч��ых продуктов"),
+            ConversationState.ENTER_DAIRY: ('dairy', "Молочных продуктов"),
             ConversationState.ENTER_GRAINS: ('grains', "Злаков")
         }
 
@@ -575,7 +575,7 @@ class PDFReportGenerator:
                 norms_text += "• Овощи: ? порций\n"
                 norms_text += "• Жиры: ? порций\n"
                 norms_text += "• Фрукты: ? порций\n"
-                norms_text += "• Молочные ��родукты: ? порций\n"
+                norms_text += "• Молочные родукты: ? порций\n"
                 norms_text += "• Злаки: ? порций\n"
             
             norms = Paragraph(norms_text, self.styles['Norms'])
@@ -641,11 +641,25 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     """Логирует исключения, возникшие в обработчиках."""
     logger.error(msg="Исключение во время обработки обновления:", exc_info=context.error)
 
+async def view_report(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text("Функция просмотра отчёта в разработке. Пожалуйста, попробуйте позже.")
+
+# Define missing functions
+async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text("Статистика пока недоступна.")
+
+async def set_norms(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text("Функция установки норм пока недоступна.")
+
+async def set_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text("Функция настройки напоминаний пока недоступна.")
+
 def main():
-    """Запускает бота и инциализирует обработчики."""
+    """Запускает бота и инициализирует обработчики."""
     application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # Обработчики команд с использованием MessageHandler
+    # Обработчики команд
+    application.add_handler(MessageHandler(filters.Regex('^/start$'), start))
     application.add_handler(MessageHandler(filters.Regex('^/add$'), add_entry_start))
     application.add_handler(MessageHandler(filters.Regex('^/view$'), view_report))
     application.add_handler(MessageHandler(filters.Regex('^/stats$'), show_stats))
@@ -656,7 +670,7 @@ def main():
     # Создание экземпляра NutrientInputHandler
     nutrient_input_handler = NutrientInputHandler()
 
-    # Опр��деление состояний для ConversationHandler
+    # Определение состояний для ConversationHandler
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('add', add_entry_start)],
         states={
@@ -692,7 +706,7 @@ def main():
     )
     application.add_handler(conv_handler)
 
-    # Доавьте обработчик ошибок
+    # Добавьте обработчик ошибок
     application.add_error_handler(error_handler)
 
     # Запуск бота
