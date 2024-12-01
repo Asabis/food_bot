@@ -1,5 +1,5 @@
 from datetime import datetime, time
-from typing import Dict
+from telegram.ext import ContextTypes
 
 class MealReminder:
     def __init__(self):
@@ -18,21 +18,7 @@ class MealReminder:
         
         for meal, meal_time in self.default_times.items():
             if now.hour == meal_time.hour and now.minute == meal_time.minute:
-                job = context.job
-                
-                # Создаем красивое сообщение с напоминанием
-                message = (
-                    f"⏰ *Время для приема пищи!*\n\n"
-                    f"🍽️ *{meal}*\n\n"
-                    f"Рекомендации:\n"
-                    f"• Не торопитесь во время еды\n"
-                    f"• Пейте достаточно воды\n"
-                    f"• Старайтесь есть разнообразную пищу\n\n"
-                    f"📝 Не забудьте записать прием пищи в дневник: /add"
-                )
-                
                 await context.bot.send_message(
-                    job.chat_id,
-                    message,
-                    parse_mode='Markdown'
+                    chat_id=context.job.chat_id,
+                    text=f"Время для {meal}! Не забудьте записать прием пищи в дневник.",
                 ) 

@@ -2,41 +2,44 @@ import sqlite3
 from typing import List
 from datetime import datetime
 import pytz
+import logging
 
 DB_NAME = 'food_diary.db'
 MOSCOW_TZ = pytz.timezone('Europe/Moscow')
+logger = logging.getLogger(__name__)
 
 def init_db():
     """
     Инициализирует базу данных, создавая необходимые таблицы, если они не существуют.
     """
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS meals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            date TEXT NOT NULL,
-            meal_time TEXT NOT NULL,
-            protein INTEGER,
-            vegetables INTEGER,
-            fats INTEGER,
-            fruits INTEGER,
-            dairy INTEGER,
-            grains INTEGER,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS meal_photos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            meal_id INTEGER NOT NULL,
-            image_path TEXT,
-            FOREIGN KEY(meal_id) REFERENCES meals(id)
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS meals (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    date TEXT NOT NULL,
+                    meal_time TEXT NOT NULL,
+                    protein INTEGER,
+                    vegetables INTEGER,
+                    fats INTEGER,
+                    fruits INTEGER,
+                    dairy INTEGER,
+                    grains INTEGER,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS meal_photos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    meal_id INTEGER NOT NULL,
+                    image_path TEXT,
+                    FOREIGN KEY(meal_id) REFERENCES meals(id)
+                )
+            ''')
+    except sqlite3.Error as e:
+        logger.error(f"Ошибка при инициализации базы данных: {e}")
 
 def add_entry(user_id, date, meal_time, protein, vegetables, fats, fruits, dairy, grains, image_paths, timestamp):
     """

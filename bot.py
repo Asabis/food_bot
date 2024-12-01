@@ -635,4 +635,54 @@ class PDFReportGenerator:
         canvas.setFont('CustomCyrillicFont', 9)
         canvas.drawCentredString(A4[0] / 2, 15 * mm, text)
 
-# Остальной код остается без изменений, добавьте docstring аналогично выше приведенным примерам.
+def main():
+    """Запускает бота и ин��циализирует обработчики."""
+    application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+
+    # Создание обработчиков команд
+    application.add_handler(CommandHandler("start", start))
+
+    # Создание экземпляра NutrientInputHandler
+    nutrient_input_handler = NutrientInputHandler()
+
+    # Определение состояний для ConversationHandler
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('add', add_entry_start)],
+        states={
+            ConversationState.CHOOSE_MEAL.value: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, choose_meal)
+            ],
+            ConversationState.UPLOAD_PHOTO.value: [
+                MessageHandler(
+                    filters.PHOTO | filters.Regex('^/done$') | (filters.TEXT & ~filters.COMMAND),
+                    upload_photos
+                )
+            ],
+            ConversationState.ENTER_PROTEIN.value: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, nutrient_input_handler.handle_input)
+            ],
+            ConversationState.ENTER_VEGETABLES.value: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, nutrient_input_handler.handle_input)
+            ],
+            ConversationState.ENTER_FATS.value: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, nutrient_input_handler.handle_input)
+            ],
+            ConversationState.ENTER_FRUITS.value: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, nutrient_input_handler.handle_input)
+            ],
+            ConversationState.ENTER_DAIRY.value: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, nutrient_input_handler.handle_input)
+            ],
+            ConversationState.ENTER_GRAINS.value: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, nutrient_input_handler.handle_input)
+            ],
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )
+    application.add_handler(conv_handler)
+
+    # Запуск бота
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()

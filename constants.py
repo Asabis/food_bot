@@ -1,26 +1,14 @@
-from enum import Enum, auto
+from enum import Enum
 
-class ConversationState(Enum):
-    """
-    Перечисление состояний разговора для ConversHandler.
-    """
-    CHOOSE_MEAL = auto()
-    UPLOAD_PHOTO = auto()
-    ENTER_PROTEIN = auto()
-    ENTER_VEGETABLES = auto()
-    ENTER_FATS = auto()
-    ENTER_FRUITS = auto()
-    ENTER_DAIRY = auto()
-    ENTER_GRAINS = auto()
+class MealTime(Enum):
+    BREAKFAST = "Завтрак"
+    MORNING_SNACK = "Утренний перекус"
+    LUNCH = "Обед"
+    AFTERNOON_SNACK = "Обеденный перекус"
+    TEA_TIME = "Полдник"
+    DINNER = "Ужин"
 
-MEAL_TIMES = [
-    "Завтрак",
-    "Утренний перекус",
-    "Обед",
-    "Обеденный перекус",
-    "Полдник",
-    "Ужин"
-]
+MEAL_TIMES = [meal.value for meal in MealTime]
 
 # Ограничения для валидации
 NUTRIENT_LIMITS = {
@@ -72,3 +60,13 @@ MESSAGES = {
     'send_error': "Произошла ошибка при отправке отчёта.",
     'enter_amount': "Введите количество {nutrient_name} (в порциях):"
 }
+
+class ConversationState(Enum):
+    CHOOSE_MEAL = 1
+    UPLOAD_PHOTO = 2
+    ENTER_PROTEIN = 3
+    ENTER_VEGETABLES = 4
+    ENTER_FATS = 5
+    ENTER_FRUITS = 6
+    ENTER_DAIRY = 7
+    ENTER_GRAINS = 8
