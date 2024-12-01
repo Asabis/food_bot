@@ -84,9 +84,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     # Создаем клавиатуру с кнопками
     keyboard = [
-        [KeyboardButton('/add'), KeyboardButton('/view')],
-        [KeyboardButton('/stats'), KeyboardButton('/set_norms')],
-        [KeyboardButton('/reminders'), KeyboardButton('/cancel')]
+        ['/add', '/view'],
+        ['/stats', '/set_norms'],
+        ['/reminders', '/cancel']
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(MESSAGES['welcome'], reply_markup=reply_markup)
@@ -163,7 +163,7 @@ async def upload_photos(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             context.user_data.setdefault('image_paths', []).append(image_path)
             logger.info(f"Фотография сохранена по пути: {image_path}")
             await update.message.reply_text(
-                "📷 Фотография сохранена. Вы можете отправить ещё фотографию или введите /done, чтобы продолжить."
+                "📷 Фотография ��охранена. Вы можете отправить ещё фотографию или введите /done, чтобы продолжить."
             )
         except Exception as e:
             logger.error(f"Ошибка при сохранении фотографии: {e}")
@@ -186,7 +186,7 @@ class NutrientInputHandler:
             ConversationState.ENTER_VEGETABLES: ('vegetables', "Овощей"),
             ConversationState.ENTER_FATS: ('fats', "Жиров"),
             ConversationState.ENTER_FRUITS: ('fruits', "Фруктов"),
-            ConversationState.ENTER_DAIRY: ('dairy', "Молочных продуктов"),
+            ConversationState.ENTER_DAIRY: ('dairy', "Молоч��ых продуктов"),
             ConversationState.ENTER_GRAINS: ('grains', "Злаков")
         }
 
@@ -575,7 +575,7 @@ class PDFReportGenerator:
                 norms_text += "• Овощи: ? порций\n"
                 norms_text += "• Жиры: ? порций\n"
                 norms_text += "• Фрукты: ? порций\n"
-                norms_text += "• Молочные продукты: ? порций\n"
+                norms_text += "• Молочные ��родукты: ? порций\n"
                 norms_text += "• Злаки: ? порций\n"
             
             norms = Paragraph(norms_text, self.styles['Norms'])
@@ -645,13 +645,18 @@ def main():
     """Запускает бота и инциализирует обработчики."""
     application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # Создание обработчиков команд
-    application.add_handler(CommandHandler("start", start))
+    # Обработчики команд с использованием MessageHandler
+    application.add_handler(MessageHandler(filters.Regex('^/add$'), add_entry_start))
+    application.add_handler(MessageHandler(filters.Regex('^/view$'), view_report))
+    application.add_handler(MessageHandler(filters.Regex('^/stats$'), show_stats))
+    application.add_handler(MessageHandler(filters.Regex('^/set_norms$'), set_norms))
+    application.add_handler(MessageHandler(filters.Regex('^/reminders$'), set_reminders))
+    application.add_handler(MessageHandler(filters.Regex('^/cancel$'), cancel))
 
     # Создание экземпляра NutrientInputHandler
     nutrient_input_handler = NutrientInputHandler()
 
-    # Определение состояний для ConversationHandler
+    # Опр��деление состояний для ConversationHandler
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('add', add_entry_start)],
         states={
@@ -687,7 +692,7 @@ def main():
     )
     application.add_handler(conv_handler)
 
-    # Добавьте обработчик ошибок
+    # Доавьте обработчик ошибок
     application.add_error_handler(error_handler)
 
     # Запуск бота
