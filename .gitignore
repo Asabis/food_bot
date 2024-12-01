@@ -1,0 +1,6 @@
+.env
+venv/*
+images/*
+reports/*
+.trunk/*
+__pycache__/*
