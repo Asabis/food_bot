@@ -1,10 +1,12 @@
 import sqlite3
+import os
 from typing import List
 from datetime import datetime
 import pytz
 import logging
 
-DB_NAME = 'food_diary.db'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = os.path.join(BASE_DIR, 'food_diary.db')
 MOSCOW_TZ = pytz.timezone('Europe/Moscow')
 logger = logging.getLogger(__name__)
 
@@ -13,7 +15,9 @@ def init_db():
     Инициализирует базу данных, создавая необходимые таблицы, если они не существуют.
     """
     try:
-        with sqlite3.connect(DB_NAME) as conn:
+        db_path = os.path.join(os.getcwd(), DB_NAME)
+        logger.info(f"Инициализация базы данных по пути: {db_path}")
+        with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS meals (
