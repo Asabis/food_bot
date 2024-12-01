@@ -44,6 +44,9 @@ logger = logging.getLogger('bot')
 # Состояния для ConversationHandler
 SET_PROTEIN, SET_VEGETABLES, SET_FATS, SET_FRUITS, SET_DAIRY, SET_GRAINS = range(6)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = os.path.join(BASE_DIR, 'food_diary.db')
+
 def register_cyrillic_font():
     """
     Регистрирует шрифт, поддерживающий кириллицу.
@@ -288,7 +291,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 @dataclass
 class DiaryEntry:
     """
-    Класс для хранения данных одной записи дневника.
+    Класс для храненя данных одной записи дневника.
     """
     meal_time: str
     protein: int
@@ -532,7 +535,7 @@ class PDFReportGenerator:
 
     async def generate(self, entries: List[DiaryEntry]) -> Optional[str]:
         """
-        Генерирует PDF-от��ёт и возвращает путь к файлу.
+        Генерирует PDF-отёт и возвращает путь к файлу.
         """
         try:
             os.makedirs(os.path.dirname(self.pdf_path), exist_ok=True)
@@ -634,6 +637,10 @@ class PDFReportGenerator:
         canvas.setFont('CustomCyrillicFont', 9)
         canvas.drawCentredString(A4[0] / 2, 15 * mm, text)
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Логирует исключения, возникшие в обработчиках."""
+    logger.error(msg="Исключение во время обработки обновления:", exc_info=context.error)
+
 def main():
     """Запускает бота и инциализирует обработчики."""
     application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
@@ -679,6 +686,9 @@ def main():
         fallbacks=[CommandHandler('cancel', cancel)],
     )
     application.add_handler(conv_handler)
+
+    # Добавьте обработчик ошибок
+    application.add_error_handler(error_handler)
 
     # Запуск бота
     application.run_polling()

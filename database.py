@@ -38,6 +38,7 @@ def init_db():
                     FOREIGN KEY(meal_id) REFERENCES meals(id)
                 )
             ''')
+            logger.info("Таблицы базы данных успешно созданы.")
     except sqlite3.Error as e:
         logger.error(f"Ошибка при инициализации базы данных: {e}")
 
